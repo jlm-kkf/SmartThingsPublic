@@ -14,13 +14,14 @@
  *
  *  make thermostat optional -jlm 2016-08-27
  *  update namespace, author, description -jlm 2016-08-27
+ *  create input/variable for minimum temperature difference -jlm 2016-08-31
  *
  */
 definition(
     name: "Whole House Fan",
     namespace: "jlm-kkf",
     author: "Brian Steere & John Mason",
-    description: "Toggle a whole house fan (switch) when: Outside is cooler than inside, Inside is above x temp, Thermostat is off (optional), window/door open (optional)",
+    description: "Toggle a whole house fan (switch) when: Outside is more than x degrees cooler than inside, Inside is above x temp, Thermostat is off (optional), window/door open (optional)",
     category: "Green Living",
     iconUrl: "https://s3.amazonaws.com/smartapp-icons/Developers/whole-house-fan.png",
     iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Developers/whole-house-fan%402x.png"
@@ -34,7 +35,8 @@ preferences {
     
     section("Indoor") {
     	input "inTemp", "capability.temperatureMeasurement", title: "Indoor Thermometer", required: true
-        input "minTemp", "number", title: "Minimum Indoor Temperature"
+        input "minTemp", "number", title: "Minimum Indoor Temperature", required: true
+        input "minDiff", "numner", title: "Minimum Degrees warmer Inside", required: false
         input "fans", "capability.switch", title: "Vent Fan", multiple: true, required: true
     }
     
@@ -81,7 +83,7 @@ def checkThings(evt) {
     }
     def somethingOpen = settings.checkContacts == 'No' || settings.contacts?.find { it.currentContact == 'open' }
     
-    log.debug "Inside: $insideTemp, Outside: $outsideTemp, Thermostat: $thermostatMode, Something Open: $somethingOpen"
+    log.debug "Inside: $insideTemp, Outside: $outsideTemp, Thermostat: $thermostatMode, Something Open: $somethingOpen, Minimum Difference: $minDiff"
     
     def shouldRun = true;
     
@@ -92,7 +94,11 @@ def checkThings(evt) {
     		shouldRun = false;
     	}
     }
-    
+
+    if (minDiff) {
+    	insideTemp -= minDiff
+    }
+
     if(insideTemp < outsideTemp) {
     	log.debug "Not running due to insideTemp > outdoorTemp"
     	shouldRun = false;
